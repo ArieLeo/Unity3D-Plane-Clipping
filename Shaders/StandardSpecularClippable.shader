@@ -1,14 +1,15 @@
-Shader "Custom/StandardClippable" {
+Shader "Custom/StandardSpecularClippable"
+{
 	Properties
 	{
 		_Color("Color", Color) = (1,1,1,1)
 		_MainTex("Albedo", 2D) = "white" {}
-		
+
 		_Cutoff("Alpha Cutoff", Range(0.0, 1.0)) = 0.5
 
 		_Glossiness("Smoothness", Range(0.0, 1.0)) = 0.5
-		[Gamma] _Metallic("Metallic", Range(0.0, 1.0)) = 0.0
-		_MetallicGlossMap("Metallic", 2D) = "white" {}
+		_SpecColor("Specular", Color) = (0.2,0.2,0.2)
+		_SpecGlossMap("Specular", 2D) = "white" {}
 
 		_BumpScale("Scale", Float) = 1.0
 		_BumpMap("Normal Map", 2D) = "bump" {}
@@ -21,7 +22,7 @@ Shader "Custom/StandardClippable" {
 
 		_EmissionColor("Color", Color) = (0,0,0)
 		_EmissionMap("Emission", 2D) = "white" {}
-		
+
 		_DetailMask("Detail Mask", 2D) = "white" {}
 
 		_DetailAlbedoMap("Detail Albedo x2", 2D) = "grey" {}
@@ -47,20 +48,20 @@ Shader "Custom/StandardClippable" {
 	}
 
 	CGINCLUDE
-		#define UNITY_SETUP_BRDF_INPUT MetallicSetup
+		#define UNITY_SETUP_BRDF_INPUT SpecularSetup
 	ENDCG
 
 	SubShader
 	{
 		Tags { "RenderType"="Opaque" "PerformanceChecks"="False" }
 		LOD 300
-	
+
 
 		// ------------------------------------------------------------------
 		//  Base forward pass (directional light, emission, lightmaps, ...)
 		Pass
 		{
-			Name "FORWARD" 
+			Name "FORWARD"
 			Tags { "LightMode" = "ForwardBase" }
 
 			Blend [_SrcBlend] [_DstBlend]
@@ -70,22 +71,22 @@ Shader "Custom/StandardClippable" {
 			#pragma target 3.0
 			// TEMPORARY: GLES2.0 temporarily disabled to prevent errors spam on devices without textureCubeLodEXT
 			#pragma exclude_renderers gles
-			
+
 			// -------------------------------------
-					
+
 			#pragma shader_feature _NORMALMAP
 			#pragma shader_feature _ _ALPHATEST_ON _ALPHABLEND_ON _ALPHAPREMULTIPLY_ON
 			#pragma shader_feature _EMISSION
-			#pragma shader_feature _METALLICGLOSSMAP 
+			#pragma shader_feature _SPECGLOSSMAP
 			#pragma shader_feature ___ _DETAIL_MULX2
 			#pragma shader_feature _PARALLAXMAP
-			
+
 			#pragma multi_compile_fwdbase
 			#pragma multi_compile_fog
 
-			#pragma multi_compile __ CLIP_ONE CLIP_TWO CLIP_THREE
 			#pragma vertex vertBase
 			#pragma fragment fragBase
+			#pragma multi_compile __ CLIP_ONE CLIP_TWO CLIP_THREE
 			#include "UnityStandardCoreForwardClippable.cginc"
 
 			ENDCG
@@ -108,20 +109,19 @@ Shader "Custom/StandardClippable" {
 
 			// -------------------------------------
 
-			
+
 			#pragma shader_feature _NORMALMAP
 			#pragma shader_feature _ _ALPHATEST_ON _ALPHABLEND_ON _ALPHAPREMULTIPLY_ON
-			#pragma shader_feature _METALLICGLOSSMAP
+			#pragma shader_feature _SPECGLOSSMAP
 			#pragma shader_feature ___ _DETAIL_MULX2
 			#pragma shader_feature _PARALLAXMAP
-			
+
 			#pragma multi_compile_fwdadd_fullshadows
 			#pragma multi_compile_fog
 
-			#pragma multi_compile __ CLIP_ONE CLIP_TWO CLIP_THREE
 			#pragma vertex vertAdd
 			#pragma fragment fragAdd
-
+			#pragma multi_compile __ CLIP_ONE CLIP_TWO CLIP_THREE
 			#include "UnityStandardCoreForwardClippable.cginc"
 
 			ENDCG
@@ -131,14 +131,14 @@ Shader "Custom/StandardClippable" {
 		Pass {
 			Name "ShadowCaster"
 			Tags { "LightMode" = "ShadowCaster" }
-			
+
 			ZWrite On ZTest LEqual
 
 			CGPROGRAM
 			#pragma target 3.0
 			// TEMPORARY: GLES2.0 temporarily disabled to prevent errors spam on devices without textureCubeLodEXT
 			#pragma exclude_renderers gles
-			
+
 			// -------------------------------------
 
 
@@ -149,7 +149,6 @@ Shader "Custom/StandardClippable" {
 			#pragma fragment fragShadowCasterClip
 
 			#pragma multi_compile __ CLIP_ONE CLIP_TWO CLIP_THREE
-
 			#include "standard_shadow_clipped.cginc"
 
 			ENDCG
@@ -165,14 +164,14 @@ Shader "Custom/StandardClippable" {
 			#pragma target 3.0
 			// TEMPORARY: GLES2.0 temporarily disabled to prevent errors spam on devices without textureCubeLodEXT
 			#pragma exclude_renderers nomrt gles
-			
+
 
 			// -------------------------------------
 
 			#pragma shader_feature _NORMALMAP
 			#pragma shader_feature _ _ALPHATEST_ON _ALPHABLEND_ON _ALPHAPREMULTIPLY_ON
 			#pragma shader_feature _EMISSION
-			#pragma shader_feature _METALLICGLOSSMAP
+			#pragma shader_feature _SPECGLOSSMAP
 			#pragma shader_feature ___ _DETAIL_MULX2
 			#pragma shader_feature _PARALLAXMAP
 
@@ -180,12 +179,11 @@ Shader "Custom/StandardClippable" {
 			#pragma multi_compile LIGHTMAP_OFF LIGHTMAP_ON
 			#pragma multi_compile DIRLIGHTMAP_OFF DIRLIGHTMAP_COMBINED DIRLIGHTMAP_SEPARATE
 			#pragma multi_compile DYNAMICLIGHTMAP_OFF DYNAMICLIGHTMAP_ON
-			
+
 			#pragma vertex vertDeferredClip
 			#pragma fragment fragDeferredClip
 
 			#pragma multi_compile __ CLIP_ONE CLIP_TWO CLIP_THREE
-
 			#include "standard_clipped.cginc"
 
 			ENDCG
@@ -196,7 +194,7 @@ Shader "Custom/StandardClippable" {
 		// This pass it not used during regular rendering.
 		Pass
 		{
-			Name "META" 
+			Name "META"
 			Tags { "LightMode"="Meta" }
 
 			Cull Off
@@ -206,7 +204,7 @@ Shader "Custom/StandardClippable" {
 			#pragma fragment frag_meta
 
 			#pragma shader_feature _EMISSION
-			#pragma shader_feature _METALLICGLOSSMAP
+			#pragma shader_feature _SPECGLOSSMAP
 			#pragma shader_feature ___ _DETAIL_MULX2
 
 			#include "UnityStandardMeta.cginc"
@@ -223,7 +221,7 @@ Shader "Custom/StandardClippable" {
 		//  Base forward pass (directional light, emission, lightmaps, ...)
 		Pass
 		{
-			Name "FORWARD" 
+			Name "FORWARD"
 			Tags { "LightMode" = "ForwardBase" }
 
 			Blend [_SrcBlend] [_DstBlend]
@@ -231,22 +229,22 @@ Shader "Custom/StandardClippable" {
 
 			CGPROGRAM
 			#pragma target 2.0
-			
+
 			#pragma shader_feature _NORMALMAP
 			#pragma shader_feature _ _ALPHATEST_ON _ALPHABLEND_ON _ALPHAPREMULTIPLY_ON
-			#pragma shader_feature _EMISSION 
-			#pragma shader_feature _METALLICGLOSSMAP 
+			#pragma shader_feature _EMISSION
+			#pragma shader_feature _SPECGLOSSMAP
 			#pragma shader_feature ___ _DETAIL_MULX2
 			// SM2.0: NOT SUPPORTED shader_feature _PARALLAXMAP
 
-			#pragma skip_variants SHADOWS_SOFT DIRLIGHTMAP_COMBINED DIRLIGHTMAP_SEPARATE
+			#pragma skip_variants SHADOWS_SOFT DYNAMICLIGHTMAP_ON DIRLIGHTMAP_COMBINED DIRLIGHTMAP_SEPARATE
 
 			#pragma multi_compile_fwdbase
 			#pragma multi_compile_fog
-			#pragma multi_compile __ CLIP_ONE CLIP_TWO CLIP_THREE
 
 			#pragma vertex vertBase
 			#pragma fragment fragBase
+			#pragma multi_compile __ CLIP_ONE CLIP_TWO CLIP_THREE
 			#include "UnityStandardCoreForwardClippable.cginc"
 
 			ENDCG
@@ -261,23 +259,23 @@ Shader "Custom/StandardClippable" {
 			Fog { Color (0,0,0,0) } // in additive pass fog should be black
 			ZWrite Off
 			ZTest LEqual
-			
+
 			CGPROGRAM
 			#pragma target 2.0
 
 			#pragma shader_feature _NORMALMAP
 			#pragma shader_feature _ _ALPHATEST_ON _ALPHABLEND_ON _ALPHAPREMULTIPLY_ON
-			#pragma shader_feature _METALLICGLOSSMAP
+			#pragma shader_feature _SPECGLOSSMAP
 			#pragma shader_feature ___ _DETAIL_MULX2
 			// SM2.0: NOT SUPPORTED shader_feature _PARALLAXMAP
 			#pragma skip_variants SHADOWS_SOFT
-			
+
 			#pragma multi_compile_fwdadd_fullshadows
 			#pragma multi_compile_fog
-			
-			#pragma multi_compile __ CLIP_ONE CLIP_TWO CLIP_THREE
+
 			#pragma vertex vertAdd
 			#pragma fragment fragAdd
+			#pragma multi_compile __ CLIP_ONE CLIP_TWO CLIP_THREE
 			#include "UnityStandardCoreForwardClippable.cginc"
 
 			ENDCG
@@ -287,7 +285,7 @@ Shader "Custom/StandardClippable" {
 		Pass {
 			Name "ShadowCaster"
 			Tags { "LightMode" = "ShadowCaster" }
-			
+
 			ZWrite On ZTest LEqual
 
 			CGPROGRAM
@@ -297,22 +295,20 @@ Shader "Custom/StandardClippable" {
 			#pragma skip_variants SHADOWS_SOFT
 			#pragma multi_compile_shadowcaster
 
-			#pragma vertex vertShadowCasterClip
-			#pragma fragment fragShadowCasterClip
+			#pragma vertex vertShadowCaster
+			#pragma fragment fragShadowCaster
 
 			#pragma multi_compile __ CLIP_ONE CLIP_TWO CLIP_THREE
-
 			#include "standard_shadow_clipped.cginc"
 
 			ENDCG
 		}
-
 		// ------------------------------------------------------------------
 		// Extracts information for lightmapping, GI (emission, albedo, ...)
 		// This pass it not used during regular rendering.
 		Pass
 		{
-			Name "META" 
+			Name "META"
 			Tags { "LightMode"="Meta" }
 
 			Cull Off
@@ -322,14 +318,13 @@ Shader "Custom/StandardClippable" {
 			#pragma fragment frag_meta
 
 			#pragma shader_feature _EMISSION
-			#pragma shader_feature _METALLICGLOSSMAP
+			#pragma shader_feature _SPECGLOSSMAP
 			#pragma shader_feature ___ _DETAIL_MULX2
 
 			#include "UnityStandardMeta.cginc"
 			ENDCG
 		}
 	}
-
 
 	FallBack "VertexLit"
 	CustomEditor "StandardShaderGUI"
